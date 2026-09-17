@@ -1,0 +1,40 @@
+{
+  "name": "real-time-solar-generation-data-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-Time-Solar-Generation-Data-API for SLSEA operational and analytical solar data",
+  "type": "module",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "test": "node --test --test-concurrency=1",
+    "test:coverage": "node --test --experimental-test-coverage --test-concurrency=1",
+    "test:smoke": "node scripts/smoke.js",
+    "test:integration": "node scripts/integration-check.js",
+    "lint": "eslint .",
+    "check": "npm run lint && npm test"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.24.4",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.5"
+  },
+  "devDependencies": {
+    "eslint": "^9.35.0",
+    "supertest": "^7.1.4"
+  }
+}
