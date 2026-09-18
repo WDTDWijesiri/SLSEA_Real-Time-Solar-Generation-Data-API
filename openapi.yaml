@@ -6,7 +6,7 @@ info:
     Level 2 REST API for operational and analytical access to Sri Lankan rooftop-solar generation data.
     User tokens are jurisdiction-scoped and read-only. Device tokens can append readings only to their own installation.
 servers:
-  - url: /api/v1
+  - url: /
     description: Current deployment
 tags:
   - name: Authentication
@@ -15,7 +15,7 @@ tags:
   - name: Readings
   - name: Summaries
 paths:
-  /auth/user-token:
+  /api/v1/auth/user-token:
     post:
       tags: [Authentication]
       summary: Authenticate an SLSEA read user
@@ -35,7 +35,7 @@ paths:
         '200': { description: Access token issued, content: { application/json: { schema: { $ref: '#/components/schemas/UserToken' } } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '415': { $ref: '#/components/responses/UnsupportedMediaType' }
-  /auth/device-token:
+  /api/v1/auth/device-token:
     post:
       tags: [Authentication]
       summary: Authenticate a metering device
@@ -54,7 +54,7 @@ paths:
       responses:
         '200': { description: Device token issued, content: { application/json: { schema: { $ref: '#/components/schemas/DeviceToken' } } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
-  /provinces:
+  /api/v1/provinces:
     get:
       tags: [Geography]
       summary: List provinces visible to the current jurisdiction
@@ -64,7 +64,7 @@ paths:
         '304': { $ref: '#/components/responses/NotModified' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '406': { $ref: '#/components/responses/NotAcceptable' }
-  /provinces/{id}:
+  /api/v1/provinces/{id}:
     get:
       tags: [Geography]
       summary: Retrieve a province
@@ -75,7 +75,7 @@ paths:
         '304': { $ref: '#/components/responses/NotModified' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/PreconditionFailed' }
-  /provinces/{id}/districts:
+  /api/v1/provinces/{id}/districts:
     get:
       tags: [Geography]
       summary: List districts scoped to a province
@@ -84,7 +84,7 @@ paths:
       responses:
         '200': { description: District collection, content: { application/json: { schema: { $ref: '#/components/schemas/DistrictCollection' } } } }
         '304': { $ref: '#/components/responses/NotModified' }
-  /districts/{id}:
+  /api/v1/districts/{id}:
     get:
       tags: [Geography]
       summary: Retrieve a district
@@ -94,7 +94,7 @@ paths:
         '200': { description: District representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/District' } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /districts/{id}/substations:
+  /api/v1/districts/{id}/substations:
     get:
       tags: [Geography]
       summary: List substations scoped to a district
@@ -103,7 +103,7 @@ paths:
       responses:
         '200': { description: Substation collection, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Substation' } }, total: { type: integer } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
-  /districts/{id}/generation-summary:
+  /api/v1/districts/{id}/generation-summary:
     get:
       tags: [Summaries]
       summary: Aggregate operational generation for a district
@@ -114,7 +114,7 @@ paths:
         '200': { description: District generation summary, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/DistrictSummary' } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /substations/{id}:
+  /api/v1/substations/{id}:
     get:
       tags: [Geography]
       summary: Retrieve a grid substation
@@ -124,7 +124,7 @@ paths:
         '200': { description: Substation representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Substation' } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /substations/{id}/installations:
+  /api/v1/substations/{id}/installations:
     get:
       tags: [Installations]
       summary: List installations scoped to a grid substation
@@ -133,7 +133,7 @@ paths:
       responses:
         '200': { description: Installation collection, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Installation' } }, total: { type: integer } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
-  /installations/{id}:
+  /api/v1/installations/{id}:
     get:
       tags: [Installations]
       summary: Retrieve an atomic solar installation resource
@@ -143,7 +143,7 @@ paths:
         '200': { description: Installation representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Installation' } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /installations/{id}/overview:
+  /api/v1/installations/{id}/overview:
     get:
       tags: [Installations]
       summary: Retrieve the installation composite resource
@@ -154,7 +154,7 @@ paths:
         '200': { description: Composite installation representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/InstallationOverview' } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /installations/{id}/latest-reading:
+  /api/v1/installations/{id}/latest-reading:
     get:
       tags: [Readings]
       summary: Retrieve the last-known reading derived resource
@@ -164,7 +164,7 @@ paths:
         '200': { description: Most recent reading, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Reading' } } } } } }
         '304': { $ref: '#/components/responses/NotModified' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /installations/{installationId}/readings:
+  /api/v1/installations/{installationId}/readings:
     get:
       tags: [Readings]
       summary: Retrieve an installation's analytical reading history
@@ -201,7 +201,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '409': { $ref: '#/components/responses/Conflict' }
-  /readings:
+  /api/v1/readings:
     get:
       tags: [Readings]
       summary: Search generation readings across the permitted jurisdiction
@@ -219,7 +219,7 @@ paths:
         '200': { $ref: '#/components/responses/ReadingCollection' }
         '304': { $ref: '#/components/responses/NotModified' }
         '400': { $ref: '#/components/responses/BadRequest' }
-  /readings/{id}:
+  /api/v1/readings/{id}:
     get:
       tags: [Readings]
       summary: Retrieve an atomic generation reading

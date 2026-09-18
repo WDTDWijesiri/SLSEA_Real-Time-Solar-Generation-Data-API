@@ -6,18 +6,25 @@ import YAML from 'yaml';
 
 const specification = YAML.parse(fs.readFileSync(new URL('../openapi.yaml', import.meta.url), 'utf8'));
 
+test('OpenAPI displays the complete versioned API path for copying', () => {
+  assert.equal(specification.servers[0].url, '/');
+  for (const path of Object.keys(specification.paths)) {
+    assert.match(path, /^\/api\/v1\//);
+  }
+});
+
 test('OpenAPI declares required operational, analytical, and processing resources', () => {
   const required = [
-    '/installations/{id}/latest-reading',
-    '/installations/{installationId}/readings',
-    '/installations/{id}/overview',
-    '/districts/{id}/generation-summary'
+    '/api/v1/installations/{id}/latest-reading',
+    '/api/v1/installations/{installationId}/readings',
+    '/api/v1/installations/{id}/overview',
+    '/api/v1/districts/{id}/generation-summary'
   ];
   for (const path of required) assert.ok(specification.paths[path], `${path} must be documented`);
 });
 
 test('reading ingestion documents created semantics and Location', () => {
-  const created = specification.paths['/installations/{installationId}/readings'].post.responses['201'];
+  const created = specification.paths['/api/v1/installations/{installationId}/readings'].post.responses['201'];
   assert.ok(created);
   assert.ok(created.headers.Location);
 });
