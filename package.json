@@ -4,7 +4,7 @@
   "private": true,
   "description": "Real-Time-Solar-Generation-Data-API for SLSEA operational and analytical solar data",
   "type": "module",
-  "main": "src/server.js",
+  "main": "app.js",
   "engines": {
     "node": ">=20"
   },

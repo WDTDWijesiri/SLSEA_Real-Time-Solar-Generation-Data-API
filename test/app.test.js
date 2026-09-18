@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
+import deploymentApp from '../app.js';
 import app, { createApp } from '../src/app.js';
 
 const isolatedApp = createApp();
@@ -40,6 +41,7 @@ test('OpenAPI surface is served by the application', async () => {
 });
 
 test('default export is the deployable Express application', async () => {
-  const response = await request(app).get('/openapi.yaml').set('Accept', '*/*');
+  assert.equal(deploymentApp, app);
+  const response = await request(deploymentApp).get('/openapi.yaml').set('Accept', '*/*');
   assert.equal(response.status, 200);
 });
