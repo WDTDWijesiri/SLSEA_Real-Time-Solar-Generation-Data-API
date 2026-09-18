@@ -1,8 +1,7 @@
-import { createApp, deploymentFingerprint } from './app.js';
+import app, { deploymentFingerprint } from './app.js';
 import { config } from './config.js';
 import { pool } from './db.js';
 
-const app = createApp();
 const server = app.listen(config.port, () => {
   console.log(`Real-Time-Solar-Generation-Data-API listening on port ${config.port} (${deploymentFingerprint()})`);
 });

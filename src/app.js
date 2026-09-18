@@ -52,6 +52,10 @@ export function createApp() {
   return app;
 }
 
+const app = createApp();
+
+export default app;
+
 export function deploymentFingerprint() {
   return crypto.createHash('sha256').update(JSON.stringify(openapi)).digest('hex').slice(0, 12);
 }
