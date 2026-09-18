@@ -47,3 +47,13 @@ test('default export is the deployable Express application', async () => {
   const response = await request(deploymentApp).get('/openapi.yaml').set('Accept', '*/*');
   assert.equal(response.status, 200);
 });
+
+test('Swagger UI static assets are served with executable content types', async () => {
+  const css = await request(deploymentApp).get('/docs/swagger-ui.css');
+  const javascript = await request(deploymentApp).get('/docs/swagger-ui-bundle.js');
+
+  assert.equal(css.status, 200);
+  assert.match(css.headers['content-type'], /^text\/css/);
+  assert.equal(javascript.status, 200);
+  assert.match(javascript.headers['content-type'], /javascript/);
+});
