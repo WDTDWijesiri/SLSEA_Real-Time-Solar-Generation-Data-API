@@ -9,9 +9,7 @@
   "functions": {
     "api/index.js": {
       "maxDuration": 30,
-      "includeFiles": [
-        "openapi.yaml"
-      ]
+      "includeFiles": "openapi.yaml"
     }
   }
 }
