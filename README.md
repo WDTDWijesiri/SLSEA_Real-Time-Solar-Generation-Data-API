@@ -103,5 +103,6 @@ Do not submit a deployment until the live database is seeded and the URLs remain
 - [Security model](./docs/SECURITY_MODEL.md)
 - [Viva guide](./docs/VIVA_GUIDE.md)
 - [AI assistance log](./docs/AI_DISCLOSURE_LOG.md)
+- [Vercel deployment guide](./docs/VERCEL_DEPLOYMENT.md)
 
 These notes are engineering documentation, not report prose. The assessed report must be written in the student's own words under the coursework declaration.

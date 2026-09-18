@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: real-time-solar-generation-data-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "1"
+      - key: NODE_ENV
+        value: production

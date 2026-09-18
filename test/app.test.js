@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { createApp } from '../src/app.js';
+import serverlessApp from '../api/index.js';
 
 const app = createApp();
 
@@ -37,4 +38,9 @@ test('OpenAPI surface is served by the application', async () => {
   const response = await request(app).get('/openapi.yaml').set('Accept', '*/*');
   assert.equal(response.status, 200);
   assert.match(response.text, /openapi: 3\.1\.0/);
+});
+
+test('Vercel entry point exports the Express application', async () => {
+  const response = await request(serverlessApp).get('/openapi.yaml').set('Accept', '*/*');
+  assert.equal(response.status, 200);
 });

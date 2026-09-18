@@ -1,0 +1,309 @@
+openapi: 3.1.0
+info:
+  title: Real-Time-Solar-Generation-Data-API
+  version: 1.0.0
+  description: |
+    Level 2 REST API for operational and analytical access to Sri Lankan rooftop-solar generation data.
+    User tokens are jurisdiction-scoped and read-only. Device tokens can append readings only to their own installation.
+servers:
+  - url: /api/v1
+    description: Current deployment
+tags:
+  - name: Authentication
+  - name: Geography
+  - name: Installations
+  - name: Readings
+  - name: Summaries
+paths:
+  /auth/user-token:
+    post:
+      tags: [Authentication]
+      summary: Authenticate an SLSEA read user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        '200': { description: Access token issued, content: { application/json: { schema: { $ref: '#/components/schemas/UserToken' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+  /auth/device-token:
+    post:
+      tags: [Authentication]
+      summary: Authenticate a metering device
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [meterId, secret]
+              properties:
+                meterId: { type: string, example: SL-MTR-00001 }
+                secret: { type: string, format: password }
+      responses:
+        '200': { description: Device token issued, content: { application/json: { schema: { $ref: '#/components/schemas/DeviceToken' } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /provinces:
+    get:
+      tags: [Geography]
+      summary: List provinces visible to the current jurisdiction
+      security: [{ userBearer: [] }]
+      responses:
+        '200': { $ref: '#/components/responses/ProvinceCollection' }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '406': { $ref: '#/components/responses/NotAcceptable' }
+  /provinces/{id}:
+    get:
+      tags: [Geography]
+      summary: Retrieve a province
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/IfNoneMatch' }, { $ref: '#/components/parameters/IfModifiedSince' }, { $ref: '#/components/parameters/IfMatch' }]
+      responses:
+        '200': { description: Province representation, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Province' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/PreconditionFailed' }
+  /provinces/{id}/districts:
+    get:
+      tags: [Geography]
+      summary: List districts scoped to a province
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: District collection, content: { application/json: { schema: { $ref: '#/components/schemas/DistrictCollection' } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+  /districts/{id}:
+    get:
+      tags: [Geography]
+      summary: Retrieve a district
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: District representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/District' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /districts/{id}/substations:
+    get:
+      tags: [Geography]
+      summary: List substations scoped to a district
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Substation collection, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Substation' } }, total: { type: integer } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+  /districts/{id}/generation-summary:
+    get:
+      tags: [Summaries]
+      summary: Aggregate operational generation for a district
+      description: Processing resource computed from each installation's latest reading and today's cumulative-energy movement.
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: District generation summary, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/DistrictSummary' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /substations/{id}:
+    get:
+      tags: [Geography]
+      summary: Retrieve a grid substation
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Substation representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Substation' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /substations/{id}/installations:
+    get:
+      tags: [Installations]
+      summary: List installations scoped to a grid substation
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Installation collection, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Installation' } }, total: { type: integer } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+  /installations/{id}:
+    get:
+      tags: [Installations]
+      summary: Retrieve an atomic solar installation resource
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Installation representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Installation' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /installations/{id}/overview:
+    get:
+      tags: [Installations]
+      summary: Retrieve the installation composite resource
+      description: Combines installation, jurisdiction, grid, latest reading, and history metadata.
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Composite installation representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/InstallationOverview' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /installations/{id}/latest-reading:
+    get:
+      tags: [Readings]
+      summary: Retrieve the last-known reading derived resource
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Most recent reading, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Reading' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /installations/{installationId}/readings:
+    get:
+      tags: [Readings]
+      summary: Retrieve an installation's analytical reading history
+      security: [{ userBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/InstallationId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+      responses:
+        '200': { $ref: '#/components/responses/ReadingCollection' }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+    post:
+      tags: [Readings]
+      summary: Append a generation reading from the installation's device
+      description: Readings are immutable and append-only; update and delete operations are deliberately not exposed.
+      security: [{ deviceBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/InstallationId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NewReading' }
+            example: { recordedAt: '2026-09-17T10:30:00+05:30', powerKw: 4.125, cumulativeEnergyKwh: 5812.4, voltageV: 231.2 }
+      responses:
+        '201':
+          description: Reading created
+          headers: { Location: { description: URI of the created atomic reading, schema: { type: string } } }
+          content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Reading' } } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /readings:
+    get:
+      tags: [Readings]
+      summary: Search generation readings across the permitted jurisdiction
+      security: [{ userBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/From'
+        - $ref: '#/components/parameters/To'
+        - { name: provinceId, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: districtId, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+        - { name: substationId, in: query, schema: { type: integer, format: int64, minimum: 1 } }
+      responses:
+        '200': { $ref: '#/components/responses/ReadingCollection' }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /readings/{id}:
+    get:
+      tags: [Readings]
+      summary: Retrieve an atomic generation reading
+      security: [{ userBearer: [] }]
+      parameters: [{ $ref: '#/components/parameters/Id' }]
+      responses:
+        '200': { description: Reading representation, content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/Reading' } } } } } }
+        '304': { $ref: '#/components/responses/NotModified' }
+        '404': { $ref: '#/components/responses/NotFound' }
+components:
+  securitySchemes:
+    userBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token with national, province, or district read scope }
+    deviceBearer: { type: http, scheme: bearer, bearerFormat: JWT, description: Token bound to exactly one installation }
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    InstallationId: { name: installationId, in: path, required: true, schema: { type: integer, format: int64, minimum: 1 } }
+    Page: { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+    PageSize: { name: pageSize, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+    Sort: { name: sort, in: query, schema: { type: string, enum: [recordedAt, -recordedAt], default: -recordedAt } }
+    From: { name: from, in: query, description: Inclusive ISO 8601 lower bound, schema: { type: string, format: date-time } }
+    To: { name: to, in: query, description: Inclusive ISO 8601 upper bound, schema: { type: string, format: date-time } }
+    IfNoneMatch: { name: If-None-Match, in: header, schema: { type: string } }
+    IfModifiedSince: { name: If-Modified-Since, in: header, schema: { type: string, format: http-date } }
+    IfMatch: { name: If-Match, in: header, description: Requires the current representation to match one of the supplied entity tags, schema: { type: string } }
+  headers:
+    ETag: { description: Strong representation validator, schema: { type: string } }
+    LastModified: { description: Most recent resource modification, schema: { type: string, format: http-date } }
+  schemas:
+    Province:
+      type: object
+      required: [id, name, code]
+      properties: { id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, created_at: { type: string, format: date-time }, updated_at: { type: string, format: date-time } }
+    District:
+      type: object
+      properties: { id: { type: integer, format: int64 }, province_id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, province_name: { type: string } }
+    Substation:
+      type: object
+      properties: { id: { type: integer, format: int64 }, district_id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, capacity_mva: { type: string }, latitude: { type: string }, longitude: { type: string } }
+    Installation:
+      type: object
+      properties: { id: { type: integer, format: int64 }, substation_id: { type: integer, format: int64 }, name: { type: string }, meter_id: { type: string }, capacity_kw: { type: string }, latitude: { type: string }, longitude: { type: string }, commissioned_on: { type: string, format: date }, status: { type: string, enum: [active, inactive, maintenance] } }
+    InstallationOverview:
+      allOf:
+        - $ref: '#/components/schemas/Installation'
+        - type: object
+          properties: { province: { type: object }, district: { type: object }, substation: { type: object }, latest_reading: { oneOf: [{ $ref: '#/components/schemas/Reading' }, { type: 'null' }] }, reading_count: { type: integer }, first_recorded_at: { type: [string, 'null'], format: date-time }, last_recorded_at: { type: [string, 'null'], format: date-time } }
+    Reading:
+      type: object
+      required: [id, installation_id, recorded_at, power_kw, cumulative_energy_kwh, voltage_v]
+      properties: { id: { type: integer, format: int64 }, installation_id: { type: integer, format: int64 }, recorded_at: { type: string, format: date-time }, power_kw: { type: string }, cumulative_energy_kwh: { type: string }, voltage_v: { type: string }, created_at: { type: string, format: date-time } }
+    NewReading:
+      type: object
+      additionalProperties: false
+      required: [recordedAt, powerKw, cumulativeEnergyKwh, voltageV]
+      properties: { recordedAt: { type: string, format: date-time }, powerKw: { type: number, minimum: 0 }, cumulativeEnergyKwh: { type: number, minimum: 0 }, voltageV: { type: number, exclusiveMinimum: 0 } }
+    DistrictSummary:
+      type: object
+      properties: { district_id: { type: integer, format: int64 }, district_name: { type: string }, installation_count: { type: integer }, current_power_kw: { type: string }, today_energy_kwh: { type: string }, as_of: { type: [string, 'null'], format: date-time } }
+    Pagination:
+      type: object
+      properties: { page: { type: integer }, pageSize: { type: integer }, total: { type: integer }, pageCount: { type: integer } }
+    Links:
+      type: object
+      properties: { self: { type: string, format: uri }, next: { type: [string, 'null'], format: uri }, previous: { type: [string, 'null'], format: uri } }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, requestId]
+          properties: { code: { type: string }, message: { type: string }, details: { type: array, items: { type: object } }, requestId: { type: string, format: uuid } }
+    UserToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, user: { type: object } } }
+    DeviceToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, installationId: { type: integer, format: int64 } } }
+    DistrictCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/District' } }, total: { type: integer } } }
+  responses:
+    ProvinceCollection: { description: Province collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Province' } }, total: { type: integer } } } } } }
+    ReadingCollection: { description: Paginated reading collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Reading' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } } } } }
+    BadRequest: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Unauthorized: { description: Missing or invalid credentials, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Forbidden: { description: Authenticated principal lacks permission, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotFound: { description: Resource absent or outside the visible jurisdiction, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotAcceptable: { description: Requested representation is not available, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    UnsupportedMediaType: { description: Request body is not JSON, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    Conflict: { description: Reading already exists for the installation and timestamp, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    PreconditionFailed: { description: A supplied request precondition does not match the current representation, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+    NotModified: { description: Client already has the current representation }

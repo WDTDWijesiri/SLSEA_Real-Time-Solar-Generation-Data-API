@@ -6,11 +6,12 @@ const connectionOptions = config.databaseUrl ? { uri: config.databaseUrl } : con
 const nativePool = mysql.createPool({
   ...connectionOptions,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: config.mysql.connectionLimit,
   queueLimit: 0,
   timezone: 'Z',
   supportBigNumbers: true,
-  multipleStatements: true
+  multipleStatements: true,
+  ssl: config.mysql.ssl
 });
 
 function resultShape(rows) {

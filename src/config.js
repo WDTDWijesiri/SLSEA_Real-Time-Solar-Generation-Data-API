@@ -1,6 +1,9 @@
 import 'dotenv/config';
 
 const isTest = process.env.NODE_ENV === 'test';
+const databaseCa = process.env.DB_SSL_CA_BASE64
+  ? Buffer.from(process.env.DB_SSL_CA_BASE64, 'base64').toString('utf8')
+  : undefined;
 
 export const config = {
   env: process.env.NODE_ENV ?? 'development',
@@ -11,7 +14,12 @@ export const config = {
     port: Number(process.env.MYSQL_PORT ?? 3306),
     database: process.env.MYSQL_DATABASE ?? 'slsea_solar',
     user: process.env.DB_USER ?? process.env.MYSQL_USER ?? 'root',
-    password: process.env.DB_PASSWORD ?? process.env.MYSQL_PASSWORD ?? ''
+    password: process.env.DB_PASSWORD ?? process.env.MYSQL_PASSWORD ?? '',
+    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT ?? 10),
+    ssl: process.env.DB_SSL === 'true' ? {
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+      ...(databaseCa ? { ca: databaseCa } : {})
+    } : undefined
   },
   jwtSecret: process.env.JWT_SECRET ?? (isTest ? 'test-secret-at-least-thirty-two-characters' : ''),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1h',
