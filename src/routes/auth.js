@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { query } from '../db.js';
 import { ApiError } from '../errors.js';
 import { asyncHandler } from '../utils/async-handler.js';
+import { resourceLink } from '../utils/http.js';
 import { signDeviceToken, signUserToken, verifyDeviceCredentials } from '../middleware/auth.js';
 
 const router = Router();
@@ -17,14 +18,32 @@ router.post('/user-token', asyncHandler(async (request, response) => {
   if (!user || !(await bcrypt.compare(credentials.password, user.password_hash))) {
     throw new ApiError(401, 'INVALID_CREDENTIALS', 'The email or password is incorrect');
   }
-  response.json({ accessToken: signUserToken(user), tokenType: 'Bearer', expiresIn: 3600, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
+  response.json({
+    accessToken: signUserToken(user),
+    tokenType: 'Bearer',
+    expiresIn: 3600,
+    user: { id: user.id, name: user.name, email: user.email, role: user.role },
+    _links: {
+      provinces: resourceLink(request, '/api/v1/provinces'),
+      readings: resourceLink(request, '/api/v1/readings'),
+      documentation: resourceLink(request, '/docs')
+    }
+  });
 }));
 
 router.post('/device-token', asyncHandler(async (request, response) => {
   const credentials = deviceLogin.parse(request.body);
   const installation = await verifyDeviceCredentials(credentials.meterId, credentials.secret);
   if (!installation) throw new ApiError(401, 'INVALID_CREDENTIALS', 'The meter ID or device secret is incorrect');
-  response.json({ accessToken: signDeviceToken(installation), tokenType: 'Bearer', expiresIn: 3600, installationId: installation.id });
+  response.json({
+    accessToken: signDeviceToken(installation),
+    tokenType: 'Bearer',
+    expiresIn: 3600,
+    installationId: installation.id,
+    _links: {
+      submitReading: resourceLink(request, `/api/v1/installations/${installation.id}/readings`, 'POST')
+    }
+  });
 }));
 
 export default router;

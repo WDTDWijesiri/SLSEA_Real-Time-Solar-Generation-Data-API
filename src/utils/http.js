@@ -17,6 +17,24 @@ export function buildPageLinks(request, page, pageSize, total) {
   };
 }
 
+export function resourceLink(request, path, method = 'GET') {
+  const href = new URL(path, `${request.protocol}://${request.get('host')}`).toString();
+  return { href, method };
+}
+
+export function buildHypermediaPageLinks(request, page, pageSize, total) {
+  const links = buildPageLinks(request, page, pageSize, total);
+  return Object.fromEntries(
+    Object.entries(links)
+      .filter(([, href]) => href)
+      .map(([relation, href]) => [relation, { href, method: 'GET' }])
+  );
+}
+
+export function withLinks(resource, links) {
+  return { ...resource, _links: links };
+}
+
 export function sendCacheable(request, response, body, lastModified) {
   const etag = `"${crypto.createHash('sha256').update(JSON.stringify(body)).digest('base64url')}"`;
   const modified = new Date(lastModified ?? 0);

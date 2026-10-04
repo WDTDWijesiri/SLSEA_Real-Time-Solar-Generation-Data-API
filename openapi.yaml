@@ -3,7 +3,7 @@ info:
   title: Real-Time-Solar-Generation-Data-API
   version: 1.0.0
   description: |
-    Level 2 REST API for operational and analytical access to Sri Lankan rooftop-solar generation data.
+    Level 3 REST API with hypermedia controls for operational and analytical access to Sri Lankan rooftop-solar generation data.
     User tokens are jurisdiction-scoped and read-only. Device tokens can append readings only to their own installation.
 servers:
   - url: /
@@ -267,16 +267,16 @@ components:
     Province:
       type: object
       required: [id, name, code]
-      properties: { id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, created_at: { type: string, format: date-time }, updated_at: { type: string, format: date-time } }
+      properties: { id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, created_at: { type: string, format: date-time }, updated_at: { type: string, format: date-time }, _links: { $ref: '#/components/schemas/HypermediaLinks' } }
     District:
       type: object
-      properties: { id: { type: integer, format: int64 }, province_id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, province_name: { type: string } }
+      properties: { id: { type: integer, format: int64 }, province_id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, province_name: { type: string }, _links: { $ref: '#/components/schemas/HypermediaLinks' } }
     Substation:
       type: object
-      properties: { id: { type: integer, format: int64 }, district_id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, capacity_mva: { type: string }, latitude: { type: string }, longitude: { type: string } }
+      properties: { id: { type: integer, format: int64 }, district_id: { type: integer, format: int64 }, name: { type: string }, code: { type: string }, capacity_mva: { type: string }, latitude: { type: string }, longitude: { type: string }, _links: { $ref: '#/components/schemas/HypermediaLinks' } }
     Installation:
       type: object
-      properties: { id: { type: integer, format: int64 }, substation_id: { type: integer, format: int64 }, name: { type: string }, meter_id: { type: string }, capacity_kw: { type: string }, latitude: { type: string }, longitude: { type: string }, commissioned_on: { type: string, format: date }, status: { type: string, enum: [active, inactive, maintenance] } }
+      properties: { id: { type: integer, format: int64 }, substation_id: { type: integer, format: int64 }, name: { type: string }, meter_id: { type: string }, capacity_kw: { type: string }, latitude: { type: string }, longitude: { type: string }, commissioned_on: { type: string, format: date }, status: { type: string, enum: [active, inactive, maintenance] }, _links: { $ref: '#/components/schemas/HypermediaLinks' } }
     InstallationOverview:
       allOf:
         - $ref: '#/components/schemas/Installation'
@@ -285,7 +285,7 @@ components:
     Reading:
       type: object
       required: [id, installation_id, recorded_at, power_kw, cumulative_energy_kwh, voltage_v]
-      properties: { id: { type: integer, format: int64 }, installation_id: { type: integer, format: int64 }, recorded_at: { type: string, format: date-time }, power_kw: { type: string }, cumulative_energy_kwh: { type: string }, voltage_v: { type: string }, created_at: { type: string, format: date-time } }
+      properties: { id: { type: integer, format: int64 }, installation_id: { type: integer, format: int64 }, recorded_at: { type: string, format: date-time }, power_kw: { type: string }, cumulative_energy_kwh: { type: string }, voltage_v: { type: string }, created_at: { type: string, format: date-time }, _links: { $ref: '#/components/schemas/HypermediaLinks' } }
     NewReading:
       type: object
       additionalProperties: false
@@ -293,13 +293,20 @@ components:
       properties: { recordedAt: { type: string, format: date-time }, powerKw: { type: number, minimum: 0 }, cumulativeEnergyKwh: { type: number, minimum: 0 }, voltageV: { type: number, exclusiveMinimum: 0 } }
     DistrictSummary:
       type: object
-      properties: { district_id: { type: integer, format: int64 }, district_name: { type: string }, installation_count: { type: integer }, current_power_kw: { type: string }, today_energy_kwh: { type: string }, as_of: { type: [string, 'null'], format: date-time } }
+      properties: { district_id: { type: integer, format: int64 }, district_name: { type: string }, installation_count: { type: integer }, current_power_kw: { type: string }, today_energy_kwh: { type: string }, as_of: { type: [string, 'null'], format: date-time }, _links: { $ref: '#/components/schemas/HypermediaLinks' } }
     Pagination:
       type: object
       properties: { page: { type: integer }, pageSize: { type: integer }, total: { type: integer }, pageCount: { type: integer } }
     Links:
       type: object
       properties: { self: { type: string, format: uri }, next: { type: [string, 'null'], format: uri }, previous: { type: [string, 'null'], format: uri } }
+    Link:
+      type: object
+      required: [href, method]
+      properties: { href: { type: string, format: uri }, method: { type: string, enum: [GET, POST, PUT, PATCH, DELETE] } }
+    HypermediaLinks:
+      type: object
+      additionalProperties: { $ref: '#/components/schemas/Link' }
     Error:
       type: object
       required: [error]
@@ -308,18 +315,18 @@ components:
           type: object
           required: [code, message, details, requestId]
           properties: { code: { type: string }, message: { type: string }, details: { type: array, items: { type: object } }, requestId: { type: string, format: uuid } }
-    UserToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, user: { type: object } } }
-    DeviceToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, installationId: { type: integer, format: int64 } } }
-    ProvinceCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Province' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
-    DistrictCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/District' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
-    SubstationCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Substation' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
-    InstallationCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Installation' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
+    UserToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, user: { type: object }, _links: { $ref: '#/components/schemas/HypermediaLinks' } } }
+    DeviceToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, installationId: { type: integer, format: int64 }, _links: { $ref: '#/components/schemas/HypermediaLinks' } } }
+    ProvinceCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Province' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' }, _links: { $ref: '#/components/schemas/HypermediaLinks' } } }
+    DistrictCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/District' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' }, _links: { $ref: '#/components/schemas/HypermediaLinks' } } }
+    SubstationCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Substation' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' }, _links: { $ref: '#/components/schemas/HypermediaLinks' } } }
+    InstallationCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Installation' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' }, _links: { $ref: '#/components/schemas/HypermediaLinks' } } }
   responses:
     ProvinceCollection: { description: Paginated province collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ProvinceCollection' } } } }
     DistrictCollection: { description: Paginated district collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/DistrictCollection' } } } }
     SubstationCollection: { description: Paginated substation collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SubstationCollection' } } } }
     InstallationCollection: { description: Paginated installation collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/InstallationCollection' } } } }
-    ReadingCollection: { description: Paginated reading collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Reading' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } } } } }
+    ReadingCollection: { description: Paginated reading collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Reading' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' }, _links: { $ref: '#/components/schemas/HypermediaLinks' } } } } } }
     BadRequest: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     Unauthorized: { description: Missing or invalid credentials, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     Forbidden: { description: Authenticated principal lacks permission, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }

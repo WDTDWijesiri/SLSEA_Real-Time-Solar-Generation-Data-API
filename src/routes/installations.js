@@ -4,11 +4,29 @@ import { query } from '../db.js';
 import { notFound } from '../errors.js';
 import { authenticateUser } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { sendCacheable } from '../utils/http.js';
+import { resourceLink, sendCacheable, withLinks } from '../utils/http.js';
 import { scopeClause } from '../utils/scope.js';
 
 const router = Router();
 const idParams = z.object({ id: z.coerce.number().int().positive() });
+
+function installationLinks(request, installation) {
+  return {
+    self: resourceLink(request, `/api/v1/installations/${installation.id}`),
+    substation: resourceLink(request, `/api/v1/substations/${installation.substation_id}`),
+    overview: resourceLink(request, `/api/v1/installations/${installation.id}/overview`),
+    readings: resourceLink(request, `/api/v1/installations/${installation.id}/readings`),
+    latestReading: resourceLink(request, `/api/v1/installations/${installation.id}/latest-reading`)
+  };
+}
+
+function readingLinks(request, reading) {
+  return {
+    self: resourceLink(request, `/api/v1/readings/${reading.id}`),
+    installation: resourceLink(request, `/api/v1/installations/${reading.installation_id}`),
+    installationReadings: resourceLink(request, `/api/v1/installations/${reading.installation_id}/readings`)
+  };
+}
 
 router.get('/installations/:id', authenticateUser, asyncHandler(async (request, response) => {
   const { id } = idParams.parse(request.params);
@@ -25,7 +43,7 @@ router.get('/installations/:id', authenticateUser, asyncHandler(async (request, 
     JOIN provinces p ON p.id = d.province_id
     WHERE i.id = ? AND ${scope}`, params);
   if (!result.rows[0]) throw notFound('Solar installation');
-  sendCacheable(request, response, { data: result.rows[0] }, result.rows[0].updated_at);
+  sendCacheable(request, response, { data: withLinks(result.rows[0], installationLinks(request, result.rows[0])) }, result.rows[0].updated_at);
 }));
 
 router.get('/installations/:id/overview', authenticateUser, asyncHandler(async (request, response) => {
@@ -70,6 +88,7 @@ router.get('/installations/:id/overview', authenticateUser, asyncHandler(async (
     } : null,
     reading_count: Number(row.reading_count), first_recorded_at: row.first_recorded_at, last_recorded_at: row.last_recorded_at
   };
+  data._links = installationLinks(request, { id: row.id, substation_id: row.related_substation_id });
   const modified = row.last_recorded_at ?? row.updated_at;
   sendCacheable(request, response, { data }, modified);
 }));
@@ -87,7 +106,7 @@ router.get('/installations/:id/latest-reading', authenticateUser, asyncHandler(a
     JOIN LATERAL (SELECT gr.* FROM generation_readings gr WHERE gr.installation_id = i.id ORDER BY gr.recorded_at DESC LIMIT 1) r ON TRUE
     WHERE i.id = ? AND ${scope}`, params);
   if (!result.rows[0]) throw notFound('Latest generation reading');
-  sendCacheable(request, response, { data: result.rows[0] }, result.rows[0].created_at);
+  sendCacheable(request, response, { data: withLinks(result.rows[0], readingLinks(request, result.rows[0])) }, result.rows[0].created_at);
 }));
 
 export default router;

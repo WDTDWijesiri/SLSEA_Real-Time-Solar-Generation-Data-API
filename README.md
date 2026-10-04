@@ -1,6 +1,6 @@
 # Real-Time-Solar-Generation-Data-API 
 
-A MySQL-backed Level 2 REST API for real-time and historical rooftop-solar generation data. It implements the NB6007CEM coursework domain while keeping operational reads, analytical reads, device writes, and jurisdiction-scoped human reads distinct.
+A MySQL-backed Level 3 REST API for real-time and historical rooftop-solar generation data. Resource representations expose hypermedia controls for navigation and permitted actions while keeping operational reads, analytical reads, device writes, and jurisdiction-scoped human reads distinct.
 
 ## Architecture at a glance
 

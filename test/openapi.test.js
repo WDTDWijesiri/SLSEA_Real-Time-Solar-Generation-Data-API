@@ -62,3 +62,16 @@ test('all collection resources document the shared pagination contract', () => {
     assert.ok(properties.links, `${schemaName} must contain navigation links`);
   }
 });
+
+test('OpenAPI documents Level 3 hypermedia controls', () => {
+  assert.ok(specification.components.schemas.Link);
+  assert.ok(specification.components.schemas.HypermediaLinks);
+  for (const schemaName of ['Province', 'District', 'Substation', 'Installation', 'Reading', 'DistrictSummary']) {
+    assert.ok(specification.components.schemas[schemaName].properties._links, `${schemaName} must expose hypermedia controls`);
+  }
+  for (const schemaName of ['ProvinceCollection', 'DistrictCollection', 'SubstationCollection', 'InstallationCollection']) {
+    assert.ok(specification.components.schemas[schemaName].properties._links, `${schemaName} must expose collection navigation`);
+  }
+  assert.ok(specification.components.schemas.UserToken.properties._links);
+  assert.ok(specification.components.schemas.DeviceToken.properties._links);
+});

@@ -4,7 +4,7 @@ import { query } from '../db.js';
 import { notFound } from '../errors.js';
 import { authenticateUser } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { sendCacheable } from '../utils/http.js';
+import { resourceLink, sendCacheable, withLinks } from '../utils/http.js';
 import { scopeClause } from '../utils/scope.js';
 
 const router = Router();
@@ -45,7 +45,12 @@ router.get('/districts/:id/generation-summary', authenticateUser, asyncHandler(a
     JOIN provinces p ON p.id = d.province_id
     WHERE d.id = ? AND ${scope}`, params);
   if (!result.rows[0]) throw notFound('District');
-  sendCacheable(request, response, { data: result.rows[0] }, result.rows[0].as_of ?? new Date(0));
+  const summary = withLinks(result.rows[0], {
+    self: resourceLink(request, `/api/v1/districts/${id}/generation-summary`),
+    district: resourceLink(request, `/api/v1/districts/${id}`),
+    substations: resourceLink(request, `/api/v1/districts/${id}/substations`)
+  });
+  sendCacheable(request, response, { data: summary }, result.rows[0].as_of ?? new Date(0));
 }));
 
 export default router;

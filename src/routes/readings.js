@@ -4,7 +4,7 @@ import { query } from '../db.js';
 import { ApiError, notFound } from '../errors.js';
 import { authenticateDevice, authenticateUser } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { buildPageLinks, sendCacheable } from '../utils/http.js';
+import { buildHypermediaPageLinks, buildPageLinks, resourceLink, sendCacheable, withLinks } from '../utils/http.js';
 import { scopeClause } from '../utils/scope.js';
 import { ensureVisible } from '../services/access.js';
 
@@ -27,6 +27,14 @@ const listQuery = z.object({
   substationId: resourceId.optional()
 }).strict();
 
+function readingResource(request, reading) {
+  return withLinks(reading, {
+    self: resourceLink(request, `/api/v1/readings/${reading.id}`),
+    installation: resourceLink(request, `/api/v1/installations/${reading.installation_id}`),
+    installationReadings: resourceLink(request, `/api/v1/installations/${reading.installation_id}/readings`)
+  });
+}
+
 router.post('/installations/:installationId/readings', authenticateDevice, asyncHandler(async (request, response) => {
   const installationId = resourceId.parse(request.params.installationId);
   const body = readingBody.parse(request.body);
@@ -44,7 +52,7 @@ router.post('/installations/:installationId/readings', authenticateDevice, async
   const readingId = insertion.insertId;
   const result = await query('SELECT id, installation_id, recorded_at, power_kw, cumulative_energy_kwh, voltage_v, created_at FROM generation_readings WHERE id = ?', [readingId]);
   const resource = result.rows[0];
-  response.location(`${request.baseUrl}/readings/${resource.id}`).status(201).json({ data: resource });
+  response.location(`${request.baseUrl}/readings/${resource.id}`).status(201).json({ data: readingResource(request, resource) });
 }));
 
 router.get('/installations/:installationId/readings', authenticateUser, asyncHandler(async (request, response) => {
@@ -72,7 +80,7 @@ router.get('/readings/:id', authenticateUser, asyncHandler(async (request, respo
     JOIN provinces p ON p.id = d.province_id
     WHERE r.id = ? AND ${scope}`, params);
   if (!result.rows[0]) throw notFound('Generation reading');
-  sendCacheable(request, response, { data: result.rows[0] }, result.rows[0].created_at);
+  sendCacheable(request, response, { data: readingResource(request, result.rows[0]) }, result.rows[0].created_at);
 }));
 
 async function listReadings(request, response, filters) {
@@ -104,9 +112,10 @@ async function listReadings(request, response, filters) {
     ORDER BY r.recorded_at ${direction}, r.id ${direction}
     LIMIT ? OFFSET ?`, params);
   const body = {
-    data: result.rows,
+    data: result.rows.map((row) => readingResource(request, row)),
     pagination: { page: filters.page, pageSize: filters.pageSize, total, pageCount: Math.ceil(total / filters.pageSize) },
-    links: buildPageLinks(request, filters.page, filters.pageSize, total)
+    links: buildPageLinks(request, filters.page, filters.pageSize, total),
+    _links: buildHypermediaPageLinks(request, filters.page, filters.pageSize, total)
   };
   const modified = result.rows.reduce((latest, row) => row.created_at > latest ? row.created_at : latest, new Date(0));
   sendCacheable(request, response, body, modified);

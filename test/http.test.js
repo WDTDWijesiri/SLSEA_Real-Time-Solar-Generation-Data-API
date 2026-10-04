@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildPageLinks, sendCacheable } from '../src/utils/http.js';
+import { buildHypermediaPageLinks, buildPageLinks, resourceLink, sendCacheable, withLinks } from '../src/utils/http.js';
 
 test('pagination links retain filters and expose adjacent pages', () => {
   const request = { protocol: 'https', get: () => 'api.example.test', originalUrl: '/api/v1/readings?districtId=abc&page=2&pageSize=25' };
@@ -8,6 +8,22 @@ test('pagination links retain filters and expose adjacent pages', () => {
   assert.match(links.next, /page=3/);
   assert.match(links.previous, /page=1/);
   assert.match(links.self, /districtId=abc/);
+});
+
+test('hypermedia controls expose absolute links and HTTP methods', () => {
+  const request = { protocol: 'https', get: () => 'api.example.test', originalUrl: '/api/v1/provinces?page=2&pageSize=2' };
+  assert.deepEqual(resourceLink(request, '/api/v1/provinces/1'), {
+    href: 'https://api.example.test/api/v1/provinces/1',
+    method: 'GET'
+  });
+  const pageLinks = buildHypermediaPageLinks(request, 2, 2, 7);
+  assert.equal(pageLinks.self.method, 'GET');
+  assert.match(pageLinks.next.href, /page=3/);
+  assert.match(pageLinks.previous.href, /page=1/);
+  assert.deepEqual(withLinks({ id: 1 }, { self: resourceLink(request, '/api/v1/provinces/1') })._links.self, {
+    href: 'https://api.example.test/api/v1/provinces/1',
+    method: 'GET'
+  });
 });
 
 test('cache validator returns 304 with an empty body for a matching ETag', () => {
