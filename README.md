@@ -40,6 +40,7 @@ The Docker image migrates and idempotently seeds the database on startup. Local 
 - API health: `http://localhost:3000/health`
 - Swagger UI: `http://localhost:3000/docs`
 - OpenAPI document: `http://localhost:3000/openapi.yaml`
+- Authentication and cURL examples: [API_USAGE_GUIDE.md](./API_USAGE_GUIDE.md)
 
 Seed credentials are demonstrations and must be replaced for a real deployment:
 

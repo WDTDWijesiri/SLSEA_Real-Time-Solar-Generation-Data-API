@@ -40,3 +40,25 @@ test('persistent resource identifiers are documented as integers', () => {
   assert.equal(specification.components.schemas.Reading.properties.id.type, 'integer');
   assert.equal(specification.components.schemas.DeviceToken.properties.installationId.type, 'integer');
 });
+
+test('all collection resources document the shared pagination contract', () => {
+  const collections = [
+    '/api/v1/provinces',
+    '/api/v1/provinces/{id}/districts',
+    '/api/v1/districts/{id}/substations',
+    '/api/v1/substations/{id}/installations',
+    '/api/v1/installations/{installationId}/readings',
+    '/api/v1/readings'
+  ];
+  for (const path of collections) {
+    const parameters = specification.paths[path].get.parameters;
+    assert.ok(parameters.some((parameter) => parameter.$ref === '#/components/parameters/Page'), `${path} must document page`);
+    assert.ok(parameters.some((parameter) => parameter.$ref === '#/components/parameters/PageSize'), `${path} must document pageSize`);
+  }
+
+  for (const schemaName of ['ProvinceCollection', 'DistrictCollection', 'SubstationCollection', 'InstallationCollection']) {
+    const properties = specification.components.schemas[schemaName].properties;
+    assert.ok(properties.pagination, `${schemaName} must contain pagination metadata`);
+    assert.ok(properties.links, `${schemaName} must contain navigation links`);
+  }
+});

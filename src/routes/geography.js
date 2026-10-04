@@ -4,20 +4,41 @@ import { query } from '../db.js';
 import { notFound } from '../errors.js';
 import { authenticateUser } from '../middleware/auth.js';
 import { asyncHandler } from '../utils/async-handler.js';
-import { sendCacheable } from '../utils/http.js';
+import { buildPageLinks, sendCacheable } from '../utils/http.js';
 import { scopeClause } from '../utils/scope.js';
 import { ensureVisible } from '../services/access.js';
 
 const router = Router();
 const idParams = z.object({ id: z.coerce.number().int().positive() });
+const collectionQuery = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(25)
+}).strict();
+
+function paginatedBody(request, filters, total, rows) {
+  return {
+    data: rows,
+    pagination: {
+      page: filters.page,
+      pageSize: filters.pageSize,
+      total,
+      pageCount: Math.ceil(total / filters.pageSize)
+    },
+    links: buildPageLinks(request, filters.page, filters.pageSize, total)
+  };
+}
 
 router.get('/provinces', authenticateUser, asyncHandler(async (request, response) => {
+  const filters = collectionQuery.parse(request.query);
   const params = [];
   let where = 'TRUE';
   if (request.auth.role === 'province') { params.push(request.auth.provinceId); where = 'p.id = ?'; }
   if (request.auth.role === 'district') { params.push(request.auth.districtId); where = 'EXISTS (SELECT 1 FROM districts d WHERE d.province_id = p.id AND d.id = ?)'; }
-  const result = await query(`SELECT p.id, p.name, p.code, p.updated_at FROM provinces p WHERE ${where} ORDER BY p.name`, params);
-  sendCacheable(request, response, { data: result.rows, total: result.rowCount }, result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
+  const countResult = await query(`SELECT count(*) AS total FROM provinces p WHERE ${where}`, params);
+  const total = Number(countResult.rows[0].total);
+  const pageParams = [...params, filters.pageSize, (filters.page - 1) * filters.pageSize];
+  const result = await query(`SELECT p.id, p.name, p.code, p.updated_at FROM provinces p WHERE ${where} ORDER BY p.name, p.id LIMIT ? OFFSET ?`, pageParams);
+  sendCacheable(request, response, paginatedBody(request, filters, total, result.rows), result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
 }));
 
 router.get('/provinces/:id', authenticateUser, asyncHandler(async (request, response) => {
@@ -33,13 +54,17 @@ router.get('/provinces/:id', authenticateUser, asyncHandler(async (request, resp
 
 router.get('/provinces/:id/districts', authenticateUser, asyncHandler(async (request, response) => {
   const { id } = idParams.parse(request.params);
+  const filters = collectionQuery.parse(request.query);
   await ensureVisible('province', id, request.auth);
   const params = [id];
   let allowed = 'TRUE';
   if (request.auth.role === 'province') { params.push(request.auth.provinceId); allowed = 'd.province_id = ?'; }
   if (request.auth.role === 'district') { params.push(request.auth.districtId); allowed = 'd.id = ?'; }
-  const result = await query(`SELECT d.id, d.province_id, d.name, d.code, d.updated_at FROM districts d WHERE d.province_id = ? AND ${allowed} ORDER BY d.name`, params);
-  sendCacheable(request, response, { data: result.rows, total: result.rowCount }, result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
+  const countResult = await query(`SELECT count(*) AS total FROM districts d WHERE d.province_id = ? AND ${allowed}`, params);
+  const total = Number(countResult.rows[0].total);
+  const pageParams = [...params, filters.pageSize, (filters.page - 1) * filters.pageSize];
+  const result = await query(`SELECT d.id, d.province_id, d.name, d.code, d.updated_at FROM districts d WHERE d.province_id = ? AND ${allowed} ORDER BY d.name, d.id LIMIT ? OFFSET ?`, pageParams);
+  sendCacheable(request, response, paginatedBody(request, filters, total, result.rows), result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
 }));
 
 router.get('/districts/:id', authenticateUser, asyncHandler(async (request, response) => {
@@ -53,11 +78,17 @@ router.get('/districts/:id', authenticateUser, asyncHandler(async (request, resp
 
 router.get('/districts/:id/substations', authenticateUser, asyncHandler(async (request, response) => {
   const { id } = idParams.parse(request.params);
+  const filters = collectionQuery.parse(request.query);
   await ensureVisible('district', id, request.auth);
   const params = [id];
   const scope = scopeClause(request.auth, params);
-  const result = await query(`SELECT s.id, s.district_id, s.name, s.code, s.capacity_mva, s.latitude, s.longitude, s.updated_at FROM grid_substations s JOIN districts d ON d.id = s.district_id JOIN provinces p ON p.id = d.province_id WHERE s.district_id = ? AND ${scope} ORDER BY s.name`, params);
-  sendCacheable(request, response, { data: result.rows, total: result.rowCount }, result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
+  const from = 'FROM grid_substations s JOIN districts d ON d.id = s.district_id JOIN provinces p ON p.id = d.province_id';
+  const where = `WHERE s.district_id = ? AND ${scope}`;
+  const countResult = await query(`SELECT count(*) AS total ${from} ${where}`, params);
+  const total = Number(countResult.rows[0].total);
+  const pageParams = [...params, filters.pageSize, (filters.page - 1) * filters.pageSize];
+  const result = await query(`SELECT s.id, s.district_id, s.name, s.code, s.capacity_mva, s.latitude, s.longitude, s.updated_at ${from} ${where} ORDER BY s.name, s.id LIMIT ? OFFSET ?`, pageParams);
+  sendCacheable(request, response, paginatedBody(request, filters, total, result.rows), result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
 }));
 
 router.get('/substations/:id', authenticateUser, asyncHandler(async (request, response) => {
@@ -71,11 +102,17 @@ router.get('/substations/:id', authenticateUser, asyncHandler(async (request, re
 
 router.get('/substations/:id/installations', authenticateUser, asyncHandler(async (request, response) => {
   const { id } = idParams.parse(request.params);
+  const filters = collectionQuery.parse(request.query);
   await ensureVisible('substation', id, request.auth);
   const params = [id];
   const scope = scopeClause(request.auth, params);
-  const result = await query(`SELECT i.id, i.substation_id, i.name, i.meter_id, i.capacity_kw, i.latitude, i.longitude, i.commissioned_on, i.status, i.updated_at FROM solar_installations i JOIN grid_substations s ON s.id = i.substation_id JOIN districts d ON d.id = s.district_id JOIN provinces p ON p.id = d.province_id WHERE i.substation_id = ? AND ${scope} ORDER BY i.name`, params);
-  sendCacheable(request, response, { data: result.rows, total: result.rowCount }, result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
+  const from = 'FROM solar_installations i JOIN grid_substations s ON s.id = i.substation_id JOIN districts d ON d.id = s.district_id JOIN provinces p ON p.id = d.province_id';
+  const where = `WHERE i.substation_id = ? AND ${scope}`;
+  const countResult = await query(`SELECT count(*) AS total ${from} ${where}`, params);
+  const total = Number(countResult.rows[0].total);
+  const pageParams = [...params, filters.pageSize, (filters.page - 1) * filters.pageSize];
+  const result = await query(`SELECT i.id, i.substation_id, i.name, i.meter_id, i.capacity_kw, i.latitude, i.longitude, i.commissioned_on, i.status, i.updated_at ${from} ${where} ORDER BY i.name, i.id LIMIT ? OFFSET ?`, pageParams);
+  sendCacheable(request, response, paginatedBody(request, filters, total, result.rows), result.rows.reduce((latest, row) => row.updated_at > latest ? row.updated_at : latest, new Date(0)));
 }));
 
 export default router;

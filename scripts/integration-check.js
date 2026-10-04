@@ -25,7 +25,7 @@ async function integration() {
   const national = await loginUser('national@slsea.gov.lk');
   const nationalHeaders = { Authorization: `Bearer ${national}`, Accept: 'application/json' };
   const provinces = await call('/api/v1/provinces', { headers: nationalHeaders });
-  assert.equal(provinces.body.total, 9);
+  assert.equal(provinces.body.pagination.total, 9);
 
   const western = provinces.body.data.find((province) => province.code === 'WP');
   const westernDistricts = await call(`/api/v1/provinces/${western.id}/districts`, { headers: nationalHeaders });
@@ -35,7 +35,7 @@ async function integration() {
   const district = await loginUser('col@slsea.gov.lk');
   const districtHeaders = { Authorization: `Bearer ${district}`, Accept: 'application/json' };
   const scopedProvinces = await call('/api/v1/provinces', { headers: districtHeaders });
-  assert.equal(scopedProvinces.body.total, 1);
+  assert.equal(scopedProvinces.body.pagination.total, 1);
   await call(`/api/v1/districts/${otherDistrict.id}`, { headers: districtHeaders }, 404);
 
   const substations = await call(`/api/v1/districts/${colombo.id}/substations`, { headers: nationalHeaders });

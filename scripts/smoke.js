@@ -17,7 +17,7 @@ async function smoke() {
   });
   const headers = { Authorization: `Bearer ${login.body.accessToken}`, Accept: 'application/json' };
   const provinces = await request('/api/v1/provinces', { headers });
-  if (provinces.body.total !== 9) throw new Error(`Expected 9 provinces, received ${provinces.body.total}`);
+  if (provinces.body.pagination.total !== 9) throw new Error(`Expected 9 provinces, received ${provinces.body.pagination.total}`);
   const history = await request('/api/v1/readings?page=1&pageSize=10&sort=-recordedAt', { headers });
   if (history.body.pagination.total < 134_000) throw new Error(`Expected substantial reading history, received ${history.body.pagination.total}`);
   const etag = history.response.headers.get('etag');

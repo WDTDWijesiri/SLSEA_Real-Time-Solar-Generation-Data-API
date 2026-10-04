@@ -59,9 +59,13 @@ paths:
       tags: [Geography]
       summary: List provinces visible to the current jurisdiction
       security: [{ userBearer: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
       responses:
         '200': { $ref: '#/components/responses/ProvinceCollection' }
         '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '406': { $ref: '#/components/responses/NotAcceptable' }
   /api/v1/provinces/{id}:
@@ -80,10 +84,14 @@ paths:
       tags: [Geography]
       summary: List districts scoped to a province
       security: [{ userBearer: [] }]
-      parameters: [{ $ref: '#/components/parameters/Id' }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
       responses:
-        '200': { description: District collection, content: { application/json: { schema: { $ref: '#/components/schemas/DistrictCollection' } } } }
+        '200': { $ref: '#/components/responses/DistrictCollection' }
         '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
   /api/v1/districts/{id}:
     get:
       tags: [Geography]
@@ -99,10 +107,14 @@ paths:
       tags: [Geography]
       summary: List substations scoped to a district
       security: [{ userBearer: [] }]
-      parameters: [{ $ref: '#/components/parameters/Id' }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
       responses:
-        '200': { description: Substation collection, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Substation' } }, total: { type: integer } } } } } }
+        '200': { $ref: '#/components/responses/SubstationCollection' }
         '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
   /api/v1/districts/{id}/generation-summary:
     get:
       tags: [Summaries]
@@ -129,10 +141,14 @@ paths:
       tags: [Installations]
       summary: List installations scoped to a grid substation
       security: [{ userBearer: [] }]
-      parameters: [{ $ref: '#/components/parameters/Id' }]
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
       responses:
-        '200': { description: Installation collection, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Installation' } }, total: { type: integer } } } } } }
+        '200': { $ref: '#/components/responses/InstallationCollection' }
         '304': { $ref: '#/components/responses/NotModified' }
+        '400': { $ref: '#/components/responses/BadRequest' }
   /api/v1/installations/{id}:
     get:
       tags: [Installations]
@@ -294,9 +310,15 @@ components:
           properties: { code: { type: string }, message: { type: string }, details: { type: array, items: { type: object } }, requestId: { type: string, format: uuid } }
     UserToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, user: { type: object } } }
     DeviceToken: { type: object, properties: { accessToken: { type: string }, tokenType: { const: Bearer }, expiresIn: { type: integer }, installationId: { type: integer, format: int64 } } }
-    DistrictCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/District' } }, total: { type: integer } } }
+    ProvinceCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Province' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
+    DistrictCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/District' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
+    SubstationCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Substation' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
+    InstallationCollection: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Installation' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } }
   responses:
-    ProvinceCollection: { description: Province collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Province' } }, total: { type: integer } } } } } }
+    ProvinceCollection: { description: Paginated province collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/ProvinceCollection' } } } }
+    DistrictCollection: { description: Paginated district collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/DistrictCollection' } } } }
+    SubstationCollection: { description: Paginated substation collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/SubstationCollection' } } } }
+    InstallationCollection: { description: Paginated installation collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { $ref: '#/components/schemas/InstallationCollection' } } } }
     ReadingCollection: { description: Paginated reading collection, headers: { ETag: { $ref: '#/components/headers/ETag' }, Last-Modified: { $ref: '#/components/headers/LastModified' } }, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Reading' } }, pagination: { $ref: '#/components/schemas/Pagination' }, links: { $ref: '#/components/schemas/Links' } } } } } }
     BadRequest: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
     Unauthorized: { description: Missing or invalid credentials, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
